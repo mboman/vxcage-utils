@@ -91,68 +91,72 @@ def get_type(file_data):
     return file_type
 
 
-logging.info('[%s] Opening' % sys.argv[1])
-archive = zipfile.ZipFile(sys.argv[1])
-zipname = os.path.splitext(os.path.basename(sys.argv[1]))[0]
-archive.setpassword('infected')
-
-numOfFiles = len(archive.namelist())
-
-for (index, sampleEntry) in enumerate(archive.namelist()):
-    logging.info('[%s] [%s] Got entry (%s/%s)' % (zipname, sampleEntry,
-                 index + 1, numOfFiles))
-    sample = archive.open(sampleEntry, 'r')
-
-    sampleData = sample.read()
-
-    logging.debug('[%s] [%s] Generating hashes' % (zipname,
-                  sampleEntry))
-    md5 = hashlib.md5(sampleData).hexdigest()
-    sha1 = hashlib.sha1(sampleData).hexdigest()
-    sha256 = hashlib.sha256(sampleData).hexdigest()
-    sha512 = hashlib.sha512(sampleData).hexdigest()
-    filetype = get_filetype(sampleData)
-
-    logging.debug('[%s] [%s] Quering database for already existing file (hash=%s)'
-                   % (zipname, sampleEntry, sha256))
-    existing = db.fs.files.find_one({'sha256': sha256})
-
-    upload_sample = True
-    if existing:
-        logging.info('[%s] [%s] Sample already exists' % (zipname,
-                     sampleEntry))
-        logging.info('[%s] [%s] Verifying contents' % (zipname,
-                     sampleEntry))
-        if not md5 == existing['md5']:
-            logging.warning('[%s] [%s] Checksum not matching'
-                            % (zipname, sampleEntry))
-            upload_sample = True
-        else:
-            logging.info('[%s] [%s] Checksum matching' % (zipname,
-                         sampleEntry))
-            upload_sample = False
-    else:
-        upload_sample = True
-
-    if upload_sample:
-        logging.debug('[%s] [%s] Uploading sample' % (zipname,
+for zfilename in sys.argv[1:]:
+    logging.info('[%s] Opening' % zfilename)
+    archive = zipfile.ZipFile(zfilename)
+    zipname = os.path.splitext(os.path.basename(zfilename))[0]
+    archive.setpassword('infected')
+    
+    numOfFiles = len(archive.namelist())
+    
+    for (index, sampleEntry) in enumerate(archive.namelist()):
+        logging.info('[%s] [%s] Got entry (%s/%s)' % (zipname, sampleEntry,
+                     index + 1, numOfFiles))
+        sample = archive.open(sampleEntry, 'r')
+    
+        sampleData = sample.read()
+    
+        logging.debug('[%s] [%s] Generating hashes' % (zipname,
                       sampleEntry))
-        new = fs.new_file(filename=sampleEntry, sha1=sha1,
-                          sha256=sha256, sha512=sha512,
-                          filetype=filetype)
-        for chunk in get_chunks(sampleData):
-            logging.debug('[%s] [%s] writing chunk' % (zipname,
+        md5 = hashlib.md5(sampleData).hexdigest()
+        sha1 = hashlib.sha1(sampleData).hexdigest()
+        sha256 = hashlib.sha256(sampleData).hexdigest()
+        sha512 = hashlib.sha512(sampleData).hexdigest()
+        filetype = get_filetype(sampleData)
+    
+        logging.debug('[%s] [%s] Quering database for already existing file (hash=%s)'
+                       % (zipname, sampleEntry, sha256))
+        existing = db.fs.files.find_one({'sha256': sha256})
+    
+        upload_sample = True
+        if existing:
+            logging.info('[%s] [%s] Sample already exists' % (zipname,
+                         sampleEntry))
+            logging.info('[%s] [%s] Verifying contents' % (zipname,
+                         sampleEntry))
+            if not md5 == existing['md5']:
+                logging.warning('[%s] [%s] Checksum not matching'
+                                % (zipname, sampleEntry))
+                upload_sample = True
+            else:
+                logging.info('[%s] [%s] Checksum matching' % (zipname,
+                             sampleEntry))
+                upload_sample = False
+        else:
+            upload_sample = True
+    
+        if upload_sample:
+            logging.debug('[%s] [%s] Uploading sample' % (zipname,
                           sampleEntry))
-            new.write(chunk)
-        new.close()
-        logging.info('[%s] [%s] Uploaded sample' % (zipname,
-                     sampleEntry))
-    logging.debug('[%s] [%s] Reclaiming memory' % (zipname,
-                  sampleEntry))
-    sample.close()
+            new = fs.new_file(filename=sampleEntry, sha1=sha1,
+                              sha256=sha256, sha512=sha512,
+                              filetype=filetype)
+            for chunk in get_chunks(sampleData):
+                logging.debug('[%s] [%s] writing chunk' % (zipname,
+                              sampleEntry))
+                new.write(chunk)
+            new.close()
+            logging.info('[%s] [%s] Uploaded sample' % (zipname,
+                         sampleEntry))
+        logging.debug('[%s] [%s] Reclaiming memory' % (zipname,
+                      sampleEntry))
+        sample.close()
+    
+        del sample
+        del sampleData
+    
+    logging.info('[%s] Closing' % zipname)
+    archive.close()
+    logging.info('[%s] Removing %s' % (zipname,zfilename))
+    os.remove(zfilename)
 
-    del sample
-    del sampleData
-
-logging.info('[%s] Closing' % zipname)
-archive.close()

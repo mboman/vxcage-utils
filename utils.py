@@ -165,7 +165,6 @@ def put_file(
 
 def get_file(
     db,
-    generator=False,
     filename=None,
     md5=None,
     sha1=None,
@@ -200,14 +199,10 @@ def get_file(
             if fh:
                 if filename:
                     lfh = open(filename, 'wb')
-                    for chunk in fh.readchunk():
+                    for chunk in fh.read(size=fh.chunk_size):
                         lfh.write(chunk)
                     lfh.close()
                     return filename
-                if generator:
-                    for chunk in fh.readchunk():
-                        yield chunk
-                    return
                 else:
                     return fh.read()
     return None
