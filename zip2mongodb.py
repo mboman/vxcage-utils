@@ -9,7 +9,7 @@ from pymongo import MongoClient
 import gridfs
 import StringIO
 import hashlib
-from utils import Config
+from utils import Config, get_type
 
 try:
     import magic
@@ -63,34 +63,6 @@ fs = gridfs.GridFS(db)
 logging.basicConfig(format='%(levelname) -10s %(asctime)s %(message)s',
                     level=logging.DEBUG)
 
-
-def get_type(file_data):
-    try:
-        ms = magic.open(magic.MAGIC_NONE)
-        ms.load()
-        file_type = ms.buffer(file_data)
-        logging.debug('Got magic through method #1')
-    except:
-        try:
-            file_type = magic.from_buffer(file_data)
-            logging.debug('Got magic through method #2')
-        except:
-            try:
-                import subprocess
-                file_path = tempfile.NamedTemporaryFile(mode='w+b')
-                file_path.write(file_data)
-                file_path.flush()
-                file_process = subprocess.Popen(['file', '-b',
-                        file_path], stdout=subprocess.PIPE)
-                file_type = file_process.stdout.read().strip()
-                file_path.close()
-                logging.debug('Got magic through method #3')
-            except:
-                return None
-
-    return file_type
-
-
 for zfilename in sys.argv[1:]:
     logging.info('[%s] Opening' % zfilename)
     archive = zipfile.ZipFile(zfilename)
@@ -112,7 +84,7 @@ for zfilename in sys.argv[1:]:
         sha1 = hashlib.sha1(sampleData).hexdigest()
         sha256 = hashlib.sha256(sampleData).hexdigest()
         sha512 = hashlib.sha512(sampleData).hexdigest()
-        filetype = get_filetype(sampleData)
+        filetype = get_type(sampleData)
     
         logging.debug('[%s] [%s] Quering database for already existing file (hash=%s)'
                        % (zipname, sampleEntry, sha256))

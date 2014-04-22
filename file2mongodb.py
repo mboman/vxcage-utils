@@ -70,7 +70,7 @@ for (index, sampleEntry) in enumerate(sys.argv[1:]):
     sha1 = hashlib.sha1(sampleData).hexdigest()
     sha256 = hashlib.sha256(sampleData).hexdigest()
     sha512 = hashlib.sha512(sampleData).hexdigest()
-    filetype = get_filetype(sampleData)
+    filetype = get_type(sampleData)
 
     logging.debug('[%s] Quering database for already existing file (hash=%s)'
                    % (sampleEntry, sha256))
