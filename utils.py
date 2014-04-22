@@ -33,6 +33,7 @@ import StringIO
 import json
 import logging
 import string
+import os
 
 try:
     from pymongo import MongoClient
@@ -54,7 +55,7 @@ class Dictionary(dict):
 
 class Config:
 
-    def __init__(self, cfg='vxcage.conf'):
+    def __init__(self, cfg=os.path.join(os.path.dirname(os.path.realpath(__file__)),'vxcage.conf')):
         config = ConfigParser.ConfigParser()
         config.read(cfg)
 
